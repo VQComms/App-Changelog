@@ -30,9 +30,9 @@ namespace Changelog
         public static string ChangelogSessionView = "ChangelogSessionView";
     }
 
-    [AppType(AppTypeEnum.FullPage), 
+    [AppType(AppTypeEnum.FullPage),
     AppGuid("20A79C86-9FB4-4160-A4FD-29E37E185673"),
-    AppControlGuid("EB533748-2560-4DBE-8168-5B726616316F"), 
+    AppControlGuid("EB533748-2560-4DBE-8168-5B726616316F"),
     AppAuthor("Countersoft"), AppKey("changelog"),
     AppName("Changelog"),
     AppDescription("Changelog"),
@@ -67,12 +67,12 @@ namespace Changelog
                     }
                 }
             }
-            catch (Exception ex)  {}
-                        
+            catch (Exception ex) { }
+
             var activeProjects = ProjectManager.GetActive();
 
             var viewableProjects = new List<ProjectDto>();
-            
+
             if (activeProjects == null || activeProjects.Count == 0)
             {
                 activeProjects = new List<ProjectDto>();
@@ -89,8 +89,8 @@ namespace Changelog
 
             UserContext.Project = ProjectManager.Get(currentProjectId);
 
-            IEnumerable<Countersoft.Gemini.Commons.Entity.Version> versions = null;         
-           
+            IEnumerable<Countersoft.Gemini.Commons.Entity.Version> versions = null;
+
             // get all versions that are released or not according to settings passed (BUT - NEVER show archived projects)
             versions = Cache.Versions.GetAll().Where(v => v.ProjectId == currentProjectId && v.Released == true && v.Archived == false).OrderBy(o => o.Sequence);
 
@@ -131,12 +131,12 @@ namespace Changelog
             return new WidgetResult() { Success = true, Markup = new WidgetMarkup("Changelog") };
         }
 
-        private Changelog.Models.ChangelogpAppModel BuildModelData(int versionId, IEnumerable<Countersoft.Gemini.Commons.Entity.Version> iVersions, IssuesFilter OriginalFilter = null)
+        private ChangelogpAppModel BuildModelData(int versionId, IEnumerable<Countersoft.Gemini.Commons.Entity.Version> iVersions, IssuesFilter OriginalFilter = null)
         {
             StringBuilder builder = new StringBuilder();
 
-            Changelog.Models.ChangelogpAppModel model = new Changelog.Models.ChangelogpAppModel();
-            
+            ChangelogpAppModel model = new ChangelogpAppModel();
+
             List<VersionDto> versions = VersionManager.ConvertDesc(new List<Countersoft.Gemini.Commons.Entity.Version>(iVersions));
 
             if (versions.Count != iVersions.Count())
@@ -147,7 +147,7 @@ namespace Changelog
                     if (versions.Find(v => v.Entity.Id == ver.Id) == null)
                     {
                         int index = versions.FindIndex(v => v.Entity.Sequence > ver.Sequence);
-                    
+
                         if (index == -1)
                         {
                             versions.Add(VersionManager.Convert(ver));
@@ -159,13 +159,13 @@ namespace Changelog
                     }
                 }
             }
-            
-            IssuesFilter filter = new IssuesFilter();            
+
+            IssuesFilter filter = new IssuesFilter();
 
             // Build up the progress data on all the cards as we go
             foreach (var version in versions)
             {
-                Changelog.Models.ChangelogpAppModel tmp = new Changelog.Models.ChangelogpAppModel();
+                var tmp = new ChangelogpAppModel();
 
                 builder.Append(BuildAllProjectVersions(version.Entity, version.Entity.Id == versionId, version.HierarchyLevel));
 
@@ -179,7 +179,7 @@ namespace Changelog
 
                     List<ColumnInfoModel> gridColumns = GridManager.DescribeGridColumns(properties);
 
-                    GridOptionsModel gridOptions = GridManager.DescribeGridOptions();                 
+                    GridOptionsModel gridOptions = GridManager.DescribeGridOptions();
 
                     // get the version specific data
                     tmp.Issues = issues;
@@ -193,47 +193,47 @@ namespace Changelog
                     tmp.Open = tmp.Issues.Count(i => !i.IsClosed);
 
                     tmp.Statuses = (from i in tmp.Issues group i by new { Id = i.Entity.StatusId, Name = i.Status } into g select new Triple<string, int, string>(g.Key.Name, g.Count(), string.Format("{0}{1}?versions={2}&statuses={3}", UserContext.Url, NavigationHelper.GetProjectPageUrl(UserContext.Project, ProjectTemplatePageType.Items), versionId, g.Key.Id))).OrderByDescending(g => g.Second).Take(3);
-                    
+
                     tmp.Types = (from i in tmp.Issues group i by new { Id = i.Entity.TypeId, Name = i.Type } into g select new Triple<string, int, string>(g.Key.Name, g.Count(), string.Format("{0}{1}?versions={2}&types={3}&includeclosed=yes", UserContext.Url, NavigationHelper.GetProjectPageUrl(UserContext.Project, ProjectTemplatePageType.Items), versionId, g.Key.Id))).OrderByDescending(g => g.Second).Take(3);
 
                     // store the version Id 
                     model.VersionId = version.Entity.Id;
-                    
+
                     model.VersionLabel = version.Entity.Name;
-                    
+
                     model.Closed = tmp.Closed;
-                    
+
                     model.Columns = tmp.Columns;
-                    
+
                     model.Issues = tmp.Issues;
-                    
+
                     model.DisplayData = GridManager.GetDisplayData(tmp.Issues, tmp.Columns);
-                    
+
                     model.Open = tmp.Open;
-                    
+
                     model.Options = tmp.Options;
-                    
+
                     model.Statuses = tmp.Statuses;
-                    
+
                     model.Types = tmp.Types;
-                    
+
                     model.Estimated = issues.Sum(i => i.Entity.EstimatedHours * 60 + i.EstimatedMinutes);
-                    
+
                     model.Logged = issues.Sum(i => i.Entity.LoggedHours * 60 + i.Entity.LoggedMinutes);
-                    
+
                     model.Remain = model.Estimated > model.Logged ? model.Estimated - model.Logged : 0;
-                    
+
                     model.TimeLoggedOver = model.Logged > model.Estimated ? model.Logged - model.Estimated : 0;
-                    
+
                     model.ReleaseStartDate = version.Entity.StartDate;
-                    
+
                     model.ReleaseEndDate = version.Entity.ReleaseDate;
 
                     // Now get with the extra data that we need
                     var projectId = UserContext.Project.Entity.Id;
 
                     IssuesGridFilter defaultFilter = new IssuesGridFilter(IssuesFilter.CreateProjectFilter(CurrentUser.Entity.Id, CurrentProject.Entity.Id));
-                    
+
                     filter = IssuesFilter.CreateVersionFilter(CurrentUser.Entity.Id, CurrentProject.Entity.Id, version.Entity.Id);
 
                     if (OriginalFilter != null)
@@ -253,17 +253,17 @@ namespace Changelog
 
             // Visibility
             model[ItemAttributeVisibility.Status] = CanSeeProjectItemAttribute(ItemAttributeVisibility.Status);
-            
+
             model[ItemAttributeVisibility.EstimatedEffort] = CanSeeProjectItemAttribute(ItemAttributeVisibility.EstimatedEffort);
-            
+
             model[ItemAttributeVisibility.CalculatedTimeLogged] = CanSeeProjectItemAttribute(ItemAttributeVisibility.CalculatedTimeLogged);
-            
+
             model[ItemAttributeVisibility.CalculatedTimeRemaining] = model[ItemAttributeVisibility.EstimatedEffort] && model[ItemAttributeVisibility.CalculatedTimeLogged];
-                        
+
             StringBuilder sort = new StringBuilder();
-            
+
             List<string> sorting = new IssuesFilter().GetSortFields();
-            
+
             List<int> orders = new IssuesFilter().GetSortOrders();
 
             for (int i = 0; i < sorting.Count; i++)
@@ -287,12 +287,12 @@ namespace Changelog
 
             builder.Append(selected ? "<li class='selected'>" : "<li>");
 
-            builder.AppendFormat("<a href='{0}workspace/{1}/apps/changelog/getchangelog?versionId={2}&projectId={3}'>", UserContext.Url, CurrentCard.Id,version.Id, CurrentProject.Entity.Id);
-          
-            builder.AppendFormat("<div data-id='{0}' class='version-box' style='margin-left:{1}px'>",version.Id, level * 10);
-            
-            builder.AppendFormat("<span class='title'>{0}</span>", version.Name);
-            
+            builder.AppendFormat("<a href='{0}workspace/{1}/apps/changelog/getchangelog?versionId={2}&projectId={3}'>", UserContext.Url, CurrentCard.Id, version.Id, CurrentProject.Entity.Id);
+
+            builder.AppendFormat("<div data-id='{0}' class='version-box' style='margin-left:{1}px'>", version.Id, level * 10);
+
+            builder.AppendFormat("<span class='title'>{0} ({1})</span>", version.Name, version.Name);
+
             builder.Append("</div></a></li>");
 
             return builder.ToString();
@@ -304,39 +304,39 @@ namespace Changelog
             UserContext.Project = ProjectManager.Get(projectId);
 
             IssuesFilter filter = null;
-            
+
             if (Request.Form.Keys.Count > 0)
             {
                 filter = new IssuesFilter();
-                
+
                 string[] sort = Request.Form[0].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                
+
                 StringBuilder sortField = new StringBuilder();
-                
+
                 StringBuilder sortDirection = new StringBuilder();
 
                 for (int i = 0; i < sort.Length; i += 2)
                 {
                     sortField.Append(sort[i]);
-                    
+
                     sortField.Append('|');
-                    
+
                     sortDirection.Append(sort[i + 1] == "0" ? (int)SortDirection.Ascending : (int)SortDirection.Descending);
-                    
+
                     sortDirection.Append('|');
                 }
 
                 filter.SortField = sortField.ToString();
-                
+
                 filter.SortOrder = sortDirection.ToString();
-                
-                filter.ShowSequenced = false;                
+
+                filter.ShowSequenced = false;
             }
 
             if (filter == null)
             {
                 filter = HttpSessionManager.GetFilter(CurrentCard.Id, new IssuesFilter());
-                
+
                 filter.ShowSequenced = false;
             }
 
@@ -353,7 +353,7 @@ namespace Changelog
                 }
                 else
                 {
-                    versionId = versions.Count() > 0 ? versions.First().Id : 0;
+                    versionId = versions.Any() ? versions.First().Id : 0;
                 }
             }
 
@@ -366,8 +366,8 @@ namespace Changelog
                 issues = IssueManager.GetRoadmap(UserContext.Project.Entity.Id, filter, versionId);
             }
 
-            Changelog.Models.ChangelogpAppModel model = BuildModelData(versionId, versions, filter);
-            
+            ChangelogpAppModel model = BuildModelData(versionId, versions, filter);
+
             model.Issues = issues;
 
             return JsonSuccess(new { success = true, grid = RenderPartialViewToString(this, "~/Views/Shared/DisplayTemplates/IssueDto.cshtml", model), statusBar = RenderPartialViewToString(this, AppManager.Instance.GetAppUrl("20A79C86-9FB4-4160-A4FD-29E37E185673", "views/StatusBar.cshtml"), model), versions = RenderPartialViewToString(this, AppManager.Instance.GetAppUrl("20A79C86-9FB4-4160-A4FD-29E37E185673", "views/VersionProgress.cshtml"), model) });
@@ -379,36 +379,34 @@ namespace Changelog
             var issue = IssueManager.Get(issueId);
 
             ItemsGridModel model = new ItemsGridModel();
-            
-            var visibility = GetChangelogFields(issue.Entity.ProjectId); 
 
-            List<int> projectIds = new List<int>();
-            
-            projectIds.Add(issue.Entity.ProjectId);
+            var visibility = GetChangelogFields(issue.Entity.ProjectId);
+
+            List<int> projectIds = new List<int> { issue.Entity.ProjectId };
 
             var properties = GridManager.GetDisplayProperties(MetaManager.TypeGetAll(new List<ProjectDto>() { UserContext.Project }), visibility, projectIds);
 
             model.AllowSequencing = false;
-            
+
             model.ShowSequencing = false;
-            
+
             model.GroupDependencies = false;
-            
+
             model.Issues.Add(issue);
-            
+
             model.Columns = GridManager.DescribeGridColumns(properties);
-            
+
             model.DisplayData = GridManager.GetDisplayData(model.Issues, model.Columns);
-            
+
             model.Options = GridManager.DescribeGridOptions();
-            
-            JsonResponse response = new JsonResponse();
-            
-            response.Success = true;
-            
-            response.Result = new
+
+            JsonResponse response = new JsonResponse
             {
-                Html = RenderPartialViewToString(this, "~/Views/Shared/DisplayTemplates/IssueDtoRow.cshtml", model),         
+                Success = true,
+                Result = new
+                {
+                    Html = RenderPartialViewToString(this, "~/Views/Shared/DisplayTemplates/IssueDtoRow.cshtml", model),
+                }
             };
 
             string data = response.ToJson().Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
@@ -450,7 +448,7 @@ namespace Changelog
             List<ScreenField> fields = GetChangelogFields(projectId);
 
             IssuesFilter filter = HttpSessionManager.GetFilter(CurrentCard.Id);
-            
+
             if (filter == null)
             {
                 filter = ItemFilterManager.TransformFilter(IssuesFilter.CreateProjectFilter(CurrentUser.Entity.Id, projectId));
@@ -471,30 +469,28 @@ namespace Changelog
         public ActionResult SetColumns(ColumnsModel columnsModel, int projectId, int versionId)
         {
             List<ListItem> selected = columnsModel.Columns.FindAll(c => c.IsSelected);
-            
-            List<UserIssuesView> currentView = GridManager.GetUserViewColumns(ProjectTemplatePageType.Custom) ;
-            
+
+            List<UserIssuesView> currentView = GridManager.GetUserViewColumns(ProjectTemplatePageType.Custom);
+
             int sequence = 0;
 
             // Remove all properties that are not in the new view.
             currentView.RemoveAll(v => !v.IsCustomField && selected.Find(s => s.ItemId == ((int)v.Attribute).ToString()) == null);
-            
+
             currentView.RemoveAll(v => v.IsCustomField && selected.Find(s => s.ItemId == v.CustomFieldId) == null);
-            
+
             var extra = selected.FindAll(s => currentView.Find(v => !v.IsCustomField && s.ItemId == ((int)v.Attribute).ToString() || v.IsCustomField && s.ItemId == v.CustomFieldId) == null);
-            
+
             foreach (var selectedCol in extra)
             {
-                UserIssuesView column = new UserIssuesView();
-                
-                column.UserId = CurrentUser.Entity.Id;
-                
-                column.ProjectId = projectId;
-                
-                column.Sequence = 999;
-                
-                column.ViewType = ProjectTemplatePageType.Custom;
-                
+                UserIssuesView column = new UserIssuesView
+                {
+                    UserId = CurrentUser.Entity.Id,
+                    ProjectId = projectId,
+                    Sequence = 999,
+                    ViewType = ProjectTemplatePageType.Custom
+                };
+
                 if (selectedCol.ItemId.StartsWith("cf_", StringComparison.InvariantCulture))
                 {
                     column.CustomFieldId = selectedCol.ItemId;
@@ -508,7 +504,7 @@ namespace Changelog
             }
 
             currentView.ForEach(v => { v.Sequence = sequence++; v.UserId = CurrentUser.Entity.Id; });
-                        
+
             HttpSessionManager.Set(currentView, Constants.ChangelogSessionView);
 
             return JsonSuccess(new { view = currentView });
@@ -518,16 +514,16 @@ namespace Changelog
         public ActionResult ReorderColumns(int projectId, int versionId, string from, string to)
         {
             var userView = HttpSessionManager.Get<List<UserIssuesView>>(Constants.ChangelogSessionView, null);
-           
+
             if (userView == null)
             {
-                userView = GridManager.GetUserViewColumns(ProjectTemplatePageType.Custom);                
+                userView = GridManager.GetUserViewColumns(ProjectTemplatePageType.Custom);
             }
 
             var view = GridManager.ReorderUserView(from, to, ProjectTemplatePageType.Custom, userView);
 
-            HttpSessionManager.Set(view, Constants.ChangelogSessionView);       
-            
+            HttpSessionManager.Set(view, Constants.ChangelogSessionView);
+
             return JsonSuccess(view);
         }
     }
